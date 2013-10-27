@@ -1,6 +1,6 @@
 #Problem definition
-global NI=1*12*2+1
-global NJ=1* 2*2+2
+global NI=3*12*2+1
+global NJ=3* 2*2+2
 Lx = 12.0
 Ly = 2.0
 dx = Lx/(NI-1)
@@ -12,7 +12,7 @@ nu = 1/100;
 rho= 1;
 
 #Temporal integration
-dt = 0.01;
+dt = 0.00001;
 T0 = 0;
 T1 = 1;
 NT = 1;
@@ -63,7 +63,7 @@ for i=1:NI
      if ((j == 1)||(j == NJ))
        mask(ij2n(i,j))=WALL;
      endif
-     if ((i > NI/3)&&(j <= NJ/2))
+     if ((i <= NI/3)&&(j <= NJ/2))
        mask(ij2n(i,j))=WALL;
      endif
    endfor
@@ -125,8 +125,8 @@ for i=1:NI
      if (mask(ij2n(i,j)) == INNER)
        gradU(ij2n(i,j),ij2nu(i,j)) = -1/h;
        gradU(ij2n(i,j),ij2nu(i+1,j)) = 1/h;
-       gradV(ij2n(i,j),ij2nu(i,j)) = -1/h;
-       gradV(ij2n(i,j),ij2nu(i,j+1)) = 1/h;
+       gradV(ij2n(i,j),ij2nv(i,j)) = -1/h;
+       gradV(ij2n(i,j),ij2nv(i,j+1)) = 1/h;
      endif
    endfor
 endfor
@@ -165,14 +165,6 @@ for i=1:NI+1
          AxvS(ij2nu(i,j),ij2nv(i-1,j)) = 1/2;
          AxvS(ij2nu(i,j),ij2nv(i,j)) = 1/2;
        endif
-     else
-       #not inner: left unchanged
-       #AxuE(ij2nu(i,j),ij2nu(i,j)) = 1;
-       #AxuW(ij2nu(i,j),ij2nu(i,j)) = 1;
-       #AxuN(ij2nu(i,j),ij2nu(i,j)) = 1;
-       #AxuS(ij2nu(i,j),ij2nu(i,j)) = 1;
-       #AxvN(ij2nu(i,j),ij2nv(i,j)) = 1;
-       #AxvS(ij2nu(i,j),ij2nv(i,j)) = 1;
      endif
      ######################################
      #### VISCOUS LAPLACIAN
@@ -245,14 +237,6 @@ for i=1:NI
          AyuW(ij2nv(i,j),ij2nu(i,j-1)) = 1/2;
          AyuW(ij2nv(i,j),ij2nu(i,j)) = 1/2;
        endif
-     else
-       #not inner: left unchanged
-       #AyvN(ij2nv(i,j),ij2nv(i,j)) = 1;
-       #AyvS(ij2nv(i,j),ij2nv(i,j)) = 1;
-       #AyvE(ij2nv(i,j),ij2nv(i,j)) = 1;
-       #AyvW(ij2nv(i,j),ij2nv(i,j)) = 1;
-       #AyuE(ij2nv(i,j),ij2nu(i,j)) = 1;
-       #AyuW(ij2nv(i,j),ij2nu(i,j)) = 1;
      endif
      ######################################
      #### VISCOUS LAPLACIAN
@@ -307,6 +291,14 @@ p = zeros(dimP,1);
 u = zeros(dimU,1);
 v = zeros(dimV,1);
 
+#Inflow
+N = (NJ-1)-(NJ/2+1)+1
+UI = parabola(N);
+for k=1:N
+  j=k+(NJ/2);
+  u(ij2nu(2,j)) = UI(k);
+endfor
+
 i = 0;
 t = T0;
 while ((t < T1)&&(i < NT))
@@ -323,11 +315,11 @@ while ((t < T1)&&(i < NT))
   Ay = (vN.*vN - vS.*vS + vE.*uE - vW.*uW)/h/h;
 
   #prediction step
-  ustar = u + dt*(-Ax + nu*Dx*u);
-  vstar = v + dt*(-Ay + nu*Dy*v);
+  ustar = u + 0*dt*(-Ax + nu*Dx*u);
+  vstar = v + 0*dt*(-Ay + nu*Dy*v);
 
   #pressure poisson equation
-  rhs = (rho/dt) * (gradU*ustar + gradV*vstar);
+  rhs = (rho/dt) * (gradU*ustar + gradV*vstar)
   pnew = Ap\rhs;
 
   #correction step
@@ -360,10 +352,13 @@ YP=linspace(dy/2,NJ*dy,NJ);
 U=reshape(u,NJ,NI+1);
 V=reshape(v,NJ+1,NI);
 P=reshape(p,NJ,NI);
+M=reshape(mask,NJ,NI);
 
 surf(XP,YP,P);
-#surf(XU,YU,U);
-#surf(XV,YV,V);
+figure();
+surf(XU,YU,U);
+figure();
+surf(XV,YV,V);
 
 ### END POST-PROCESSING
 ####################################################################
