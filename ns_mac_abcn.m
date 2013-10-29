@@ -16,10 +16,11 @@ rho= 1;
 dtd = h*h/(nu*4)
 dtc = 2*nu/umax
 dt = 0.5*min(dtd,dtc)
+dt = 0.2
 T0 = 0;
-T1 = 1000;
+T1 = 100;
 NT = (T1-T0)/dt;
-dtol = 1.0E-6;
+dtol = 1.0E-8;
 
 #Arrays
 dimP = NI*NJ;
@@ -27,8 +28,11 @@ dimU = (NI+1)*NJ;
 dimV = NI*(NJ+1);
 
 Ap = spalloc(dimP,dimP,5*dimP);
-Dx = spalloc(dimU,dimU,5*dimU);
-Dy = spalloc(dimV,dimV,5*dimV);
+Dxu = spalloc(dimU,dimU,5*dimU);
+Dyv = spalloc(dimV,dimV,5*dimV);
+
+Ixu = spalloc(dimU,dimU,1*dimU);
+Iyv = spalloc(dimV,dimV,1*dimV);
 
 Apu = spalloc(dimP,dimU,4*dimP);
 Apv = spalloc(dimP,dimV,4*dimP);
@@ -75,8 +79,10 @@ for i=1:NI
        mask(ij2n(i,j))=WALL;
      endif
      ###INTERIOR WALLS
+     if (1)
      if ((i <= (NI-1)/3+1)&&(j <= (NJ-2)/2+1))
        mask(ij2n(i,j))=WALL;
+     endif
      endif
    endfor
 endfor
@@ -154,7 +160,7 @@ for i=1:NI
          Apv(ij2n(i,j),ij2nv(i,j)) = -1;
        endif
      else
-       #not inner: left unchanged
+       #not interior: left unchanged
        Ap(ij2n(i,j),ij2n(i,j)) = 1;
      endif
    endfor
@@ -297,45 +303,47 @@ disp("viscous laplacian (u-cells) ..."); fflush(stdout);
 for i=1:NI+1
    for j=1:NJ
      if (masku(ij2nu(i,j)) == INTERIOR)
+       Ixu(ij2nu(i,j),ij2nu(i,j)) = 1;
        #-- east face
        if (masku(ij2nu(i+1,j)) == INTERIOR)
-         Dx(ij2nu(i,j),ij2nu(i,j))  += -1/h/h;
-         Dx(ij2nu(i,j),ij2nu(i+1,j)) =  1/h/h;
+         Dxu(ij2nu(i,j),ij2nu(i,j))  += -1/h/h;
+         Dxu(ij2nu(i,j),ij2nu(i+1,j)) =  1/h/h;
        elseif (masku(ij2nu(i+1,j)) == WALL)
-         Dx(ij2nu(i,j),ij2nu(i,j))  += -1/h/h;
+         Dxu(ij2nu(i,j),ij2nu(i,j))  += -1/h/h;
        elseif (masku(ij2nu(i+1,j)) == OUTFLOW)
          #zero gradient
          #do nothing
        endif
        #-- west face
        if (masku(ij2nu(i-1,j)) == INTERIOR)
-         Dx(ij2nu(i,j),ij2nu(i,j))  += -1/h/h;
-         Dx(ij2nu(i,j),ij2nu(i-1,j)) =  1/h/h;
+         Dxu(ij2nu(i,j),ij2nu(i,j))  += -1/h/h;
+         Dxu(ij2nu(i,j),ij2nu(i-1,j)) =  1/h/h;
        elseif (masku(ij2nu(i-1,j)) == WALL)
-         Dx(ij2nu(i,j),ij2nu(i,j))  += -1/h/h;
+         Dxu(ij2nu(i,j),ij2nu(i,j))  += -1/h/h;
        elseif (masku(ij2nu(i-1,j)) == INFLOW)
-         Dx(ij2nu(i,j),ij2nu(i,j))  += -1/h/h;
-         Dx(ij2nu(i,j),ij2nu(i-1,j)) =  1/h/h;
+         Dxu(ij2nu(i,j),ij2nu(i,j))  += -1/h/h;
+         Dxu(ij2nu(i,j),ij2nu(i-1,j)) =  1/h/h;
        endif
        #-- north face
        if (masku(ij2nu(i,j+1)) == INTERIOR)
-         Dx(ij2nu(i,j),ij2nu(i,j))  += -1/h/h;
-         Dx(ij2nu(i,j),ij2nu(i,j+1)) =  1/h/h;
+         Dxu(ij2nu(i,j),ij2nu(i,j))  += -1/h/h;
+         Dxu(ij2nu(i,j),ij2nu(i,j+1)) =  1/h/h;
        elseif (masku(ij2nu(i,j+1)) == WALL)
          #ghost point
-         Dx(ij2nu(i,j),ij2nu(i,j))  += -2/h/h;
+         Dxu(ij2nu(i,j),ij2nu(i,j))  += -2/h/h;
        endif
        #-- south face
        if (masku(ij2nu(i,j-1)) == INTERIOR)
-         Dx(ij2nu(i,j),ij2nu(i,j))  += -1/h/h;
-         Dx(ij2nu(i,j),ij2nu(i,j-1)) =  1/h/h;
+         Dxu(ij2nu(i,j),ij2nu(i,j))  += -1/h/h;
+         Dxu(ij2nu(i,j),ij2nu(i,j-1)) =  1/h/h;
        elseif (masku(ij2nu(i,j-1)) == WALL)
          #ghost point
-         Dx(ij2nu(i,j),ij2nu(i,j))  += -2/h/h;
+         Dxu(ij2nu(i,j),ij2nu(i,j))  += -2/h/h;
        endif
      else
-       #not inner: left unchanged
-       Dx(ij2nu(i,j),ij2nu(i,j)) = 0;
+       #not interior: left unchanged
+       Ixu(ij2nu(i,j),ij2nu(i,j)) = 0;
+       Dxu(ij2nu(i,j),ij2nu(i,j)) = 1;
      endif
    endfor
 endfor
@@ -346,44 +354,46 @@ disp("viscous laplacian (v-cells) ..."); fflush(stdout);
 for i=1:NI
    for j=1:NJ+1
      if (maskv(ij2nv(i,j)) == INTERIOR)
+       Iyv(ij2nv(i,j),ij2nv(i,j)) = 1;
        #-- east face
        if (maskv(ij2nv(i+1,j)) == INTERIOR)
-         Dy(ij2nv(i,j),ij2nv(i,j))  += -1/h/h;
-         Dy(ij2nv(i,j),ij2nv(i+1,j)) =  1/h/h;
+         Dyv(ij2nv(i,j),ij2nv(i,j))  += -1/h/h;
+         Dyv(ij2nv(i,j),ij2nv(i+1,j)) =  1/h/h;
        elseif (maskv(ij2nv(i+1,j)) == WALL)
          #ghost point
-         Dy(ij2nv(i,j),ij2nv(i,j))  += -2/h/h;
+         Dyv(ij2nv(i,j),ij2nv(i,j))  += -2/h/h;
        elseif (maskv(ij2nv(i+1,j)) == OUTFLOW)
-         Dy(ij2nv(i,j),ij2nv(i,j))  += -1/h/h;
+         Dyv(ij2nv(i,j),ij2nv(i,j))  += -1/h/h;
        endif
        #-- west face
        if (maskv(ij2nv(i-1,j)) == INTERIOR)
-         Dy(ij2nv(i,j),ij2nv(i,j))  += -1/h/h;
-         Dy(ij2nv(i,j),ij2nv(i-1,j)) =  1/h/h;
+         Dyv(ij2nv(i,j),ij2nv(i,j))  += -1/h/h;
+         Dyv(ij2nv(i,j),ij2nv(i-1,j)) =  1/h/h;
        elseif (maskv(ij2nv(i-1,j)) == WALL)
          #ghost point
-         Dy(ij2nv(i,j),ij2nv(i,j))  += -2/h/h;
+         Dyv(ij2nv(i,j),ij2nv(i,j))  += -2/h/h;
        elseif (maskv(ij2nv(i-1,j)) == INFLOW)
          #ghost point
-         Dy(ij2nv(i,j),ij2nv(i,j))  += -2/h/h;
+         Dyv(ij2nv(i,j),ij2nv(i,j))  += -2/h/h;
        endif
        #-- north face
        if (maskv(ij2nv(i,j+1)) == INTERIOR)
-         Dy(ij2nv(i,j),ij2nv(i,j))  += -1/h/h;
-         Dy(ij2nv(i,j),ij2nv(i,j+1)) =  1/h/h;
+         Dyv(ij2nv(i,j),ij2nv(i,j))  += -1/h/h;
+         Dyv(ij2nv(i,j),ij2nv(i,j+1)) =  1/h/h;
        elseif (maskv(ij2nv(i+1,j)) == WALL)
-         Dy(ij2nv(i,j),ij2nv(i,j))  += -1/h/h;
+         Dyv(ij2nv(i,j),ij2nv(i,j))  += -1/h/h;
        endif
        #-- south face
        if (maskv(ij2nv(i,j-1)) == INTERIOR)
-         Dy(ij2nv(i,j),ij2nv(i,j))  += -1/h/h;
-         Dy(ij2nv(i,j),ij2nv(i,j-1)) =  1/h/h;
+         Dyv(ij2nv(i,j),ij2nv(i,j))  += -1/h/h;
+         Dyv(ij2nv(i,j),ij2nv(i,j-1)) =  1/h/h;
        elseif (maskv(ij2nv(i+1,j)) == WALL)
-         Dy(ij2nv(i,j),ij2nv(i,j))  += -1/h/h;
+         Dyv(ij2nv(i,j),ij2nv(i,j))  += -1/h/h;
        endif
      else
-       #not inner: left unchanged
-       Dy(ij2nv(i,j),ij2nv(i,j)) = 0;
+       #not interior: left unchanged
+       Iyv(ij2nv(i,j),ij2nv(i,j)) = 0;
+       Dyv(ij2nv(i,j),ij2nv(i,j)) = 1;
      endif
    endfor
 endfor
@@ -452,11 +462,18 @@ v = zeros(dimV,1);
 
 u = ubc;
 
+pold = p;
+uold = u;
+vold = v;
+
+Dxl = Dxu - (2/nu/dt)*Ixu;
+Dyl = Dyv - (2/nu/dt)*Iyv;
+
 i = 0;
 t = T0;
 while ((t < T1)&&(i < NT))
 
-  #advection operator
+  #advection operator: Un
   uE = AxuE*u; uW = AxuW*u;
   uN = AxuN*u; uS = AxuS*u;
   vN = AxvN*v; vS = AxvS*v;
@@ -467,17 +484,40 @@ while ((t < T1)&&(i < NT))
   uE = AyuE*u; uW = AyuW*u;
   Ay = (vN.*vN - vS.*vS + vE.*uE - vW.*uW)/h;
 
+  #advection operator: Un-1
+  uE = AxuE*uold; uW = AxuW*uold;
+  uN = AxuN*uold; uS = AxuS*uold;
+  vN = AxvN*vold; vS = AxvS*vold;
+  Axold = (uE.*uE - uW.*uW + uN.*vN - uS.*vS)/h;
+
+  vN = AyvN*vold; vS = AyvS*vold;
+  vE = AyvE*vold; vW = AyvW*vold;
+  uE = AyuE*uold; uW = AyuW*uold;
+  Ayold = (vN.*vN - vS.*vS + vE.*uE - vW.*uW)/h;
+
+  #viscous operator: Un
+  Dx = Dxu*u-ubc;
+  Dy = Dyv*v-vbc;
+
   #prediction step
-  ustar = u + dt*(-Ax + nu*Dx*u);
-  vstar = v + dt*(-Ay + nu*Dy*v);
+  if (0) 
+  ustar = u + dt*(-Ax + nu*Dx);
+  vstar = v + dt*(-Ay + nu*Dy);
+  else
+  #prediction step
+  rhsu = (3/nu)*Ax - (1/nu)*Axold - Dx - (2/nu/dt)*Ixu*u + ubc;
+  rhsv = (3/nu)*Ay - (1/nu)*Ayold - Dy - (2/nu/dt)*Iyv*v + vbc;
+  ustar = Dxl\rhsu;
+  vstar = Dyl\rhsv;
+  endif
 
   #pressure poisson equation
-  rhs = (rho/dt)*(gradU*ustar + gradV*vstar) + Apu*ubc + Apv*vbc;
+  rhs = (1/dt)*(gradU*ustar + gradV*vstar) + Apu*ubc + Apv*vbc;
   pnew = Ap\rhs;
 
-  #projection step
-  unew = ustar - (dt/rho)*gradPU*pnew;
-  vnew = vstar - (dt/rho)*gradPV*pnew;
+  #correction step
+  unew = ustar - dt*gradPU*pnew;
+  vnew = vstar - dt*gradPV*pnew;
 
   #deltas
   dp=norm(pnew-p);
@@ -485,9 +525,12 @@ while ((t < T1)&&(i < NT))
   dv=norm(vnew-v);
 
   #finish timestep
+  pold = p;
+  uold = u;
+  vold = v;
+  p = pnew;
   u = unew;
   v = vnew;
-  p = pnew;
   t = t + dt;
   i = i + 1;
   if (mod(i,100) == 0)
