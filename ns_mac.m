@@ -1,6 +1,6 @@
 #Problem definition
-global NI=5*12*2+1
-global NJ=5* 2*2+2
+global NI=10*12*2+1
+global NJ=10* 2*2+2
 Lx = 12.0
 Ly = 2.0
 dx = Lx/(NI-1)
@@ -534,9 +534,12 @@ figure();
 #surf(XU,YU,U);
 contourf(XU(2:NI),YU(2:NJ-1),U(2:NJ-1,2:NI));
 #axis([XU(2) XU(NI) YU(2) YU(NJ-1)])
+hold
+czero=contour(XU(2:NI),YU(2:NJ-1),U(2:NJ-1,2:NI),[0,0]);
 axis([XU(1) XU(NI+1) YV(1) YV(NJ+1)])
 colorbar();
-title(sprintf("U-Velocity at T=%g",t));
+xzero=czero(end-1)-dx;
+title(sprintf("U-Velocity at T=%g, Vortex Attachment Point at X=%g",t,xzero));
 figure();
 
 #surf(XV,YV,V);
