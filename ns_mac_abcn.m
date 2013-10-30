@@ -1,11 +1,17 @@
 #Problem definition
-global NI=2*12*2+1
-global NJ=2* 2*2+2
+#global NI=2*12*2+1
+#global NJ=2* 2*2+2
+global NI NJ
 Lx = 12.0
 Ly = 2.0
-dx = Lx/(NI-1)
-dy = Ly/(NJ-2)
+h = 0.25
+NI = floor(Lx/h)
+NJ = floor(Ly/h)
+dx = Lx/NI
+dy = Ly/NJ
 h = (dx+dy)/2
+NI = NI + 1     #left layer
+NJ = NJ + 2     #top and bottom layer
 umax = 1
 
 #Material properties
@@ -18,14 +24,14 @@ dtc = 2*nu/umax
 dt = 0.5*min(dtd,dtc)
 dt = 0.5*dtc
 T0 = 0;
-T1 = 100;
+T1 = 1000;
 NT = (T1-T0)/dt;
-dtol = 1.0E-8;
+dtol = 1.0E-6;
 
 #Arrays
-dimP = NI*NJ;
-dimU = (NI+1)*NJ;
-dimV = NI*(NJ+1);
+dimP = NI*NJ
+dimU = (NI+1)*NJ
+dimV = NI*(NJ+1)
 
 Ap = spalloc(dimP,dimP,5*dimP);
 Dxu = spalloc(dimU,dimU,5*dimU);
