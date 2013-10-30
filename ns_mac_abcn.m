@@ -16,7 +16,7 @@ rho= 1;
 dtd = h*h/(nu*4)
 dtc = 2*nu/umax
 dt = 0.5*min(dtd,dtc)
-dt = 0.2
+dt = 0.5*dtc
 T0 = 0;
 T1 = 100;
 NT = (T1-T0)/dt;
@@ -466,8 +466,8 @@ pold = p;
 uold = u;
 vold = v;
 
-Dxl = Dxu - (2/nu/dt)*Ixu;
-Dyl = Dyv - (2/nu/dt)*Iyv;
+Dxl = Ixu - (dt*nu/2)*Dxu;
+Dyl = Iyv - (dt*nu/2)*Dyv;
 
 i = 0;
 t = T0;
@@ -504,11 +504,10 @@ while ((t < T1)&&(i < NT))
   ustar = u + dt*(-Ax + nu*Dx);
   vstar = v + dt*(-Ay + nu*Dy);
   else
-  #prediction step
-  rhsu = (3/nu)*Ax - (1/nu)*Axold - Dx - (2/nu/dt)*Ixu*u + ubc;
-  rhsv = (3/nu)*Ay - (1/nu)*Ayold - Dy - (2/nu/dt)*Iyv*v + vbc;
-  ustar = Dxl\rhsu;
-  vstar = Dyl\rhsv;
+  rhsu = -(3*dt/2)*Ax + (dt/2)*Axold + (dt*nu/2)*Dx + Ixu*u;
+  rhsv = -(3*dt/2)*Ay + (dt/2)*Ayold + (dt*nu/2)*Dy + Iyv*v;
+  ustar = Dxl\rhsu + ubc;
+  vstar = Dyl\rhsv + vbc;
   endif
 
   #pressure poisson equation
