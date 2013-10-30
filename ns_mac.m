@@ -1,6 +1,4 @@
 #Problem definition
-#global NI=2*12*2+1
-#global NJ=2* 2*2+2
 global NI NJ
 Lx = 12.0
 Ly = 2.0
@@ -10,8 +8,8 @@ NJ = floor(Ly/h)
 dx = Lx/NI
 dy = Ly/NJ
 h = (dx+dy)/2
-NI = NI + 1     #left layer
-NJ = NJ + 2     #top and bottom layer
+NI = NI + 1       #left layer
+NJ = NJ + 2       #top and bottom layer
 umax = 1
 
 #Material properties
@@ -33,11 +31,8 @@ dimU = (NI+1)*NJ
 dimV = NI*(NJ+1)
 
 Ap = spalloc(dimP,dimP,5*dimP);
-Dx = spalloc(dimU,dimU,5*dimU);
-Dy = spalloc(dimV,dimV,5*dimV);
-
-Apu = spalloc(dimP,dimU,4*dimP);
-Apv = spalloc(dimP,dimV,4*dimP);
+Dxu = spalloc(dimU,dimU,5*dimU);
+Dyv = spalloc(dimV,dimV,5*dimV);
 
 AxuE = spalloc(dimU,dimU,2*dimU);
 AxuW = spalloc(dimU,dimU,2*dimU);
@@ -72,17 +67,17 @@ for i=1:NI
    for j=1:NJ
      ###DOMAIN BOUNDARY
      if (i == 1)
-       mask(ij2n(i,j))=INFLOW;
+       mask(ij2n(i,j)) = INFLOW;
      endif
      if (i == NI)
-       mask(ij2n(i,j))=OUTFLOW;
+       mask(ij2n(i,j)) = OUTFLOW;
      endif
      if ((j == 1)||(j == NJ))
-       mask(ij2n(i,j))=WALL;
+       mask(ij2n(i,j)) = WALL;
      endif
      ###INTERIOR WALLS
      if ((i <= (NI-1)/3+1)&&(j <= (NJ-2)/2+1))
-       mask(ij2n(i,j))=WALL;
+       mask(ij2n(i,j)) = WALL;
      endif
    endfor
 endfor
@@ -94,10 +89,10 @@ disp("transcribing mask to u,v cells ..."); fflush(stdout);
 for i=1:NI
    for j=1:NJ
      if (mask(ij2n(i,j)) != INTERIOR)
-       masku(ij2nu(i,j))  =mask(ij2n(i,j)); 
-       masku(ij2nu(i+1,j))=mask(ij2n(i,j)); 
-       maskv(ij2nv(i,j))  =mask(ij2n(i,j)); 
-       maskv(ij2nv(i,j+1))=mask(ij2n(i,j)); 
+       masku(ij2nu(i,j))   = mask(ij2n(i,j)); 
+       masku(ij2nu(i+1,j)) = mask(ij2n(i,j)); 
+       maskv(ij2nv(i,j))   = mask(ij2n(i,j)); 
+       maskv(ij2nv(i,j+1)) = mask(ij2n(i,j)); 
      endif
      if (mask(ij2n(i,j)) == OUTFLOW)
        masku(ij2nu(i,j)) = INTERIOR;
@@ -135,29 +130,21 @@ for i=1:NI
        if (masku(ij2nu(i+1,j)) == INTERIOR)
          Ap(ij2n(i,j),ij2n(i,j))  += -1/h/h;
          Ap(ij2n(i,j),ij2n(i+1,j)) =  1/h/h;
-       else
-         Apu(ij2n(i,j),ij2nu(i+1,j)) = 1;
        endif
        #-- west face
        if (masku(ij2nu(i,j)) == INTERIOR)
          Ap(ij2n(i,j),ij2n(i,j))  += -1/h/h;
          Ap(ij2n(i,j),ij2n(i-1,j)) =  1/h/h;
-       else
-         Apu(ij2n(i,j),ij2nu(i,j)) = -1;
        endif
        #-- north face
        if (maskv(ij2nv(i,j+1)) == INTERIOR)
          Ap(ij2n(i,j),ij2n(i,j))  += -1/h/h;
          Ap(ij2n(i,j),ij2n(i,j+1)) =  1/h/h;
-       else
-         Apv(ij2n(i,j),ij2nv(i,j+1)) = 1;
        endif
        #-- south face
        if (maskv(ij2nv(i,j)) == INTERIOR)
          Ap(ij2n(i,j),ij2n(i,j))  += -1/h/h;
          Ap(ij2n(i,j),ij2n(i,j-1)) =  1/h/h;
-       else
-         Apv(ij2n(i,j),ij2nv(i,j)) = -1;
        endif
      else
        #not inner: left unchanged
@@ -305,43 +292,43 @@ for i=1:NI+1
      if (masku(ij2nu(i,j)) == INTERIOR)
        #-- east face
        if (masku(ij2nu(i+1,j)) == INTERIOR)
-         Dx(ij2nu(i,j),ij2nu(i,j))  += -1/h/h;
-         Dx(ij2nu(i,j),ij2nu(i+1,j)) =  1/h/h;
+         Dxu(ij2nu(i,j),ij2nu(i,j))  += -1/h/h;
+         Dxu(ij2nu(i,j),ij2nu(i+1,j)) =  1/h/h;
        elseif (masku(ij2nu(i+1,j)) == WALL)
-         Dx(ij2nu(i,j),ij2nu(i,j))  += -1/h/h;
+         Dxu(ij2nu(i,j),ij2nu(i,j))  += -1/h/h;
        elseif (masku(ij2nu(i+1,j)) == OUTFLOW)
          #zero gradient
          #do nothing
        endif
        #-- west face
        if (masku(ij2nu(i-1,j)) == INTERIOR)
-         Dx(ij2nu(i,j),ij2nu(i,j))  += -1/h/h;
-         Dx(ij2nu(i,j),ij2nu(i-1,j)) =  1/h/h;
+         Dxu(ij2nu(i,j),ij2nu(i,j))  += -1/h/h;
+         Dxu(ij2nu(i,j),ij2nu(i-1,j)) =  1/h/h;
        elseif (masku(ij2nu(i-1,j)) == WALL)
-         Dx(ij2nu(i,j),ij2nu(i,j))  += -1/h/h;
+         Dxu(ij2nu(i,j),ij2nu(i,j))  += -1/h/h;
        elseif (masku(ij2nu(i-1,j)) == INFLOW)
-         Dx(ij2nu(i,j),ij2nu(i,j))  += -1/h/h;
-         Dx(ij2nu(i,j),ij2nu(i-1,j)) =  1/h/h;
+         Dxu(ij2nu(i,j),ij2nu(i,j))  += -1/h/h;
+         Dxu(ij2nu(i,j),ij2nu(i-1,j)) =  1/h/h;
        endif
        #-- north face
        if (masku(ij2nu(i,j+1)) == INTERIOR)
-         Dx(ij2nu(i,j),ij2nu(i,j))  += -1/h/h;
-         Dx(ij2nu(i,j),ij2nu(i,j+1)) =  1/h/h;
+         Dxu(ij2nu(i,j),ij2nu(i,j))  += -1/h/h;
+         Dxu(ij2nu(i,j),ij2nu(i,j+1)) =  1/h/h;
        elseif (masku(ij2nu(i,j+1)) == WALL)
          #ghost point
-         Dx(ij2nu(i,j),ij2nu(i,j))  += -2/h/h;
+         Dxu(ij2nu(i,j),ij2nu(i,j))  += -2/h/h;
        endif
        #-- south face
        if (masku(ij2nu(i,j-1)) == INTERIOR)
-         Dx(ij2nu(i,j),ij2nu(i,j))  += -1/h/h;
-         Dx(ij2nu(i,j),ij2nu(i,j-1)) =  1/h/h;
+         Dxu(ij2nu(i,j),ij2nu(i,j))  += -1/h/h;
+         Dxu(ij2nu(i,j),ij2nu(i,j-1)) =  1/h/h;
        elseif (masku(ij2nu(i,j-1)) == WALL)
          #ghost point
-         Dx(ij2nu(i,j),ij2nu(i,j))  += -2/h/h;
+         Dxu(ij2nu(i,j),ij2nu(i,j))  += -2/h/h;
        endif
      else
        #not inner: left unchanged
-       Dx(ij2nu(i,j),ij2nu(i,j)) = 0;
+       Dxu(ij2nu(i,j),ij2nu(i,j)) = 1;
      endif
    endfor
 endfor
@@ -354,42 +341,42 @@ for i=1:NI
      if (maskv(ij2nv(i,j)) == INTERIOR)
        #-- east face
        if (maskv(ij2nv(i+1,j)) == INTERIOR)
-         Dy(ij2nv(i,j),ij2nv(i,j))  += -1/h/h;
-         Dy(ij2nv(i,j),ij2nv(i+1,j)) =  1/h/h;
+         Dyv(ij2nv(i,j),ij2nv(i,j))  += -1/h/h;
+         Dyv(ij2nv(i,j),ij2nv(i+1,j)) =  1/h/h;
        elseif (maskv(ij2nv(i+1,j)) == WALL)
          #ghost point
-         Dy(ij2nv(i,j),ij2nv(i,j))  += -2/h/h;
+         Dyv(ij2nv(i,j),ij2nv(i,j))  += -2/h/h;
        elseif (maskv(ij2nv(i+1,j)) == OUTFLOW)
-         Dy(ij2nv(i,j),ij2nv(i,j))  += -1/h/h;
+         Dyv(ij2nv(i,j),ij2nv(i,j))  += -1/h/h;
        endif
        #-- west face
        if (maskv(ij2nv(i-1,j)) == INTERIOR)
-         Dy(ij2nv(i,j),ij2nv(i,j))  += -1/h/h;
-         Dy(ij2nv(i,j),ij2nv(i-1,j)) =  1/h/h;
+         Dyv(ij2nv(i,j),ij2nv(i,j))  += -1/h/h;
+         Dyv(ij2nv(i,j),ij2nv(i-1,j)) =  1/h/h;
        elseif (maskv(ij2nv(i-1,j)) == WALL)
          #ghost point
-         Dy(ij2nv(i,j),ij2nv(i,j))  += -2/h/h;
+         Dyv(ij2nv(i,j),ij2nv(i,j))  += -2/h/h;
        elseif (maskv(ij2nv(i-1,j)) == INFLOW)
          #ghost point
-         Dy(ij2nv(i,j),ij2nv(i,j))  += -2/h/h;
+         Dyv(ij2nv(i,j),ij2nv(i,j))  += -2/h/h;
        endif
        #-- north face
        if (maskv(ij2nv(i,j+1)) == INTERIOR)
-         Dy(ij2nv(i,j),ij2nv(i,j))  += -1/h/h;
-         Dy(ij2nv(i,j),ij2nv(i,j+1)) =  1/h/h;
+         Dyv(ij2nv(i,j),ij2nv(i,j))  += -1/h/h;
+         Dyv(ij2nv(i,j),ij2nv(i,j+1)) =  1/h/h;
        elseif (maskv(ij2nv(i+1,j)) == WALL)
-         Dy(ij2nv(i,j),ij2nv(i,j))  += -1/h/h;
+         Dyv(ij2nv(i,j),ij2nv(i,j))  += -1/h/h;
        endif
        #-- south face
        if (maskv(ij2nv(i,j-1)) == INTERIOR)
-         Dy(ij2nv(i,j),ij2nv(i,j))  += -1/h/h;
-         Dy(ij2nv(i,j),ij2nv(i,j-1)) =  1/h/h;
+         Dyv(ij2nv(i,j),ij2nv(i,j))  += -1/h/h;
+         Dyv(ij2nv(i,j),ij2nv(i,j-1)) =  1/h/h;
        elseif (maskv(ij2nv(i+1,j)) == WALL)
-         Dy(ij2nv(i,j),ij2nv(i,j))  += -1/h/h;
+         Dyv(ij2nv(i,j),ij2nv(i,j))  += -1/h/h;
        endif
      else
        #not inner: left unchanged
-       Dy(ij2nv(i,j),ij2nv(i,j)) = 0;
+       Dyv(ij2nv(i,j),ij2nv(i,j)) = 1;
      endif
    endfor
 endfor
@@ -473,12 +460,16 @@ while ((t < T1)&&(i < NT))
   uE = AyuE*u; uW = AyuW*u;
   Ay = (vN.*vN - vS.*vS + vE.*uE - vW.*uW)/h;
 
+  #viscous operator
+  Dx = Dxu*u-ubc;
+  Dy = Dyv*v-vbc;
+
   #prediction step
-  ustar = u + dt*(-Ax + nu*Dx*u);
-  vstar = v + dt*(-Ay + nu*Dy*v);
+  ustar = u + dt*(-Ax + nu*Dx);
+  vstar = v + dt*(-Ay + nu*Dy);
 
   #pressure poisson equation
-  rhs = (rho/dt)*(gradU*ustar + gradV*vstar) + Apu*ubc + Apv*vbc;
+  rhs = (rho/dt)*(gradU*ustar + gradV*vstar);
   pnew = Ap\rhs;
 
   #projection step
@@ -529,7 +520,6 @@ V=reshape(v,NJ+1,NI);
 
 #surf(XP,YP,P);
 contourf(XP(2:NI),YP(2:NJ-1),P(2:NJ-1,2:NI));
-#axis([XP(2) XP(NI) YP(2) YP(NJ-1)])
 axis([XU(1) XU(NI+1) YV(1) YV(NJ+1)])
 colorbar();
 title(sprintf("Pressure at T=%g",t));
@@ -537,7 +527,6 @@ figure();
 
 #surf(XU,YU,U);
 contourf(XU(2:NI),YU(2:NJ-1),U(2:NJ-1,2:NI));
-#axis([XU(2) XU(NI) YU(2) YU(NJ-1)])
 hold
 czero=contour(XU(2:NI),YU(2:NJ-1),U(2:NJ-1,2:NI),[0,0]);
 axis([XU(1) XU(NI+1) YV(1) YV(NJ+1)])
@@ -548,7 +537,6 @@ figure();
 
 #surf(XV,YV,V);
 contourf(XV(2:NI),YV(2:NJ),V(2:NJ,2:NI));
-#axis([XV(2) XV(NI) YV(2) YV(NJ)])
 axis([XU(1) XU(NI+1) YV(1) YV(NJ+1)])
 colorbar();
 title(sprintf("V-Velocity at T=%g",t));

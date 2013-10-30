@@ -1,6 +1,4 @@
 #Problem definition
-#global NI=2*12*2+1
-#global NJ=2* 2*2+2
 global NI NJ
 Lx = 12.0
 Ly = 2.0
@@ -10,8 +8,8 @@ NJ = floor(Ly/h)
 dx = Lx/NI
 dy = Ly/NJ
 h = (dx+dy)/2
-NI = NI + 1     #left layer
-NJ = NJ + 2     #top and bottom layer
+NI = NI + 1       #left layer
+NJ = NJ + 2       #top and bottom layer
 umax = 1
 
 #Material properties
@@ -21,8 +19,10 @@ rho= 1;
 #Temporal integration
 dtd = h*h/(nu*4)
 dtc = 2*nu/umax
+cfl = h/umax
 dt = 0.5*min(dtd,dtc)
 dt = 0.5*dtc
+dt = 0.5*cfl
 T0 = 0;
 T1 = 1000;
 NT = (T1-T0)/dt;
@@ -39,9 +39,6 @@ Dyv = spalloc(dimV,dimV,5*dimV);
 
 Ixu = spalloc(dimU,dimU,1*dimU);
 Iyv = spalloc(dimV,dimV,1*dimV);
-
-Apu = spalloc(dimP,dimU,4*dimP);
-Apv = spalloc(dimP,dimV,4*dimP);
 
 AxuE = spalloc(dimU,dimU,2*dimU);
 AxuW = spalloc(dimU,dimU,2*dimU);
@@ -76,19 +73,17 @@ for i=1:NI
    for j=1:NJ
      ###DOMAIN BOUNDARY
      if (i == 1)
-       mask(ij2n(i,j))=INFLOW;
+       mask(ij2n(i,j)) = INFLOW;
      endif
      if (i == NI)
-       mask(ij2n(i,j))=OUTFLOW;
+       mask(ij2n(i,j)) = OUTFLOW;
      endif
      if ((j == 1)||(j == NJ))
-       mask(ij2n(i,j))=WALL;
+       mask(ij2n(i,j)) = WALL;
      endif
      ###INTERIOR WALLS
-     if (1)
      if ((i <= (NI-1)/3+1)&&(j <= (NJ-2)/2+1))
-       mask(ij2n(i,j))=WALL;
-     endif
+       mask(ij2n(i,j)) = WALL;
      endif
    endfor
 endfor
@@ -100,10 +95,10 @@ disp("transcribing mask to u,v cells ..."); fflush(stdout);
 for i=1:NI
    for j=1:NJ
      if (mask(ij2n(i,j)) != INTERIOR)
-       masku(ij2nu(i,j))  =mask(ij2n(i,j)); 
-       masku(ij2nu(i+1,j))=mask(ij2n(i,j)); 
-       maskv(ij2nv(i,j))  =mask(ij2n(i,j)); 
-       maskv(ij2nv(i,j+1))=mask(ij2n(i,j)); 
+       masku(ij2nu(i,j))   = mask(ij2n(i,j)); 
+       masku(ij2nu(i+1,j)) = mask(ij2n(i,j)); 
+       maskv(ij2nv(i,j))   = mask(ij2n(i,j)); 
+       maskv(ij2nv(i,j+1)) = mask(ij2n(i,j)); 
      endif
      if (mask(ij2n(i,j)) == OUTFLOW)
        masku(ij2nu(i,j)) = INTERIOR;
@@ -141,29 +136,21 @@ for i=1:NI
        if (masku(ij2nu(i+1,j)) == INTERIOR)
          Ap(ij2n(i,j),ij2n(i,j))  += -1/h/h;
          Ap(ij2n(i,j),ij2n(i+1,j)) =  1/h/h;
-       else
-         Apu(ij2n(i,j),ij2nu(i+1,j)) = 1;
        endif
        #-- west face
        if (masku(ij2nu(i,j)) == INTERIOR)
          Ap(ij2n(i,j),ij2n(i,j))  += -1/h/h;
          Ap(ij2n(i,j),ij2n(i-1,j)) =  1/h/h;
-       else
-         Apu(ij2n(i,j),ij2nu(i,j)) = -1;
        endif
        #-- north face
        if (maskv(ij2nv(i,j+1)) == INTERIOR)
          Ap(ij2n(i,j),ij2n(i,j))  += -1/h/h;
          Ap(ij2n(i,j),ij2n(i,j+1)) =  1/h/h;
-       else
-         Apv(ij2n(i,j),ij2nv(i,j+1)) = 1;
        endif
        #-- south face
        if (maskv(ij2nv(i,j)) == INTERIOR)
          Ap(ij2n(i,j),ij2n(i,j))  += -1/h/h;
          Ap(ij2n(i,j),ij2n(i,j-1)) =  1/h/h;
-       else
-         Apv(ij2n(i,j),ij2nv(i,j)) = -1;
        endif
      else
        #not interior: left unchanged
@@ -507,6 +494,7 @@ while ((t < T1)&&(i < NT))
 
   #prediction step
   if (0) 
+    #full explicit
   ustar = u + dt*(-Ax + nu*Dx);
   vstar = v + dt*(-Ay + nu*Dy);
   else
@@ -517,7 +505,7 @@ while ((t < T1)&&(i < NT))
   endif
 
   #pressure poisson equation
-  rhs = (1/dt)*(gradU*ustar + gradV*vstar) + Apu*ubc + Apv*vbc;
+  rhs = (1/dt)*(gradU*ustar + gradV*vstar);
   pnew = Ap\rhs;
 
   #correction step
@@ -571,7 +559,6 @@ V=reshape(v,NJ+1,NI);
 
 #surf(XP,YP,P);
 contourf(XP(2:NI),YP(2:NJ-1),P(2:NJ-1,2:NI));
-#axis([XP(2) XP(NI) YP(2) YP(NJ-1)])
 axis([XU(1) XU(NI+1) YV(1) YV(NJ+1)])
 colorbar();
 title(sprintf("Pressure at T=%g",t));
@@ -579,7 +566,6 @@ figure();
 
 #surf(XU,YU,U);
 contourf(XU(2:NI),YU(2:NJ-1),U(2:NJ-1,2:NI));
-#axis([XU(2) XU(NI) YU(2) YU(NJ-1)])
 hold
 czero=contour(XU(2:NI),YU(2:NJ-1),U(2:NJ-1,2:NI),[0,0]);
 axis([XU(1) XU(NI+1) YV(1) YV(NJ+1)])
@@ -590,7 +576,6 @@ figure();
 
 #surf(XV,YV,V);
 contourf(XV(2:NI),YV(2:NJ),V(2:NJ,2:NI));
-#axis([XV(2) XV(NI) YV(2) YV(NJ)])
 axis([XU(1) XU(NI+1) YV(1) YV(NJ+1)])
 colorbar();
 title(sprintf("V-Velocity at T=%g",t));
