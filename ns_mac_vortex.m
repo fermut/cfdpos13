@@ -1,8 +1,10 @@
 #Problem definition
 global NI NJ
-Lx = 12.0
+Lx = 10.0
 Ly = 2.0
-h = 0.25
+lx = 0.5
+ly = 0.5
+h = 0.05
 NI = floor(Lx/h)
 NJ = floor(Ly/h)
 dx = Lx/NI
@@ -13,21 +15,19 @@ NJ = NJ + 2       #top and bottom layer
 umax = 1
 
 #Material properties
-nu = 1/100;
+nu = 1/400;
 rho= 1;
 
 #Temporal integration
 dtd = h*h/(nu*4)
 dtc = 2*nu/umax
 dt = 0.5*min(dtd,dtc)
+tau = lx/umax/4
+dt = min(dt,tau)
 T0 = 0;
-T1 = 1000;
+T1 = 200;
 NT = (T1-T0)/dt;
 dtol = 1.0E-6;
-
-#Postprocessing
-NPRIN = 10;
-NSAVE = 500;
 
 #Arrays
 dimP = NI*NJ
@@ -82,7 +82,8 @@ for i=1:NI
      ###INTERIOR WALLS
      xp = (i-1.5)*dx;
      yp = (j-1.5)*dy;
-     if ((xp < 4)&&(yp < 1))
+     if ((xp > 0.75)&&(xp < 1.25)&&
+         (yp > 0.75)&&(yp < 1.25))
        mask(ij2n(i,j)) = WALL;
      endif
    endfor
@@ -121,7 +122,8 @@ UI=parabola(N);
 N=1;
 for j=1:NJ
   if (masku(ij2nu(2,j)) == INFLOW)
-    ubc(ij2nu(2,j)) = umax*UI(N);
+    #ubc(ij2nu(2,j)) = umax*UI(N);
+    ubc(ij2nu(2,j)) = umax;
     N = N + 1;
   endif
 endfor
@@ -444,14 +446,14 @@ endfor
 
 ####################################################################
 ### POST-PROCESSING INITIALIZATION
-XP=linspace(dx/2-dx,(NI-0.5)*dx-dx,NI);
-YP=linspace(dy/2-dy,(NJ-0.5)*dy-dy,NJ);
+XP=linspace(dx/2,(NI-0.5)*dx,NI);
+YP=linspace(dy/2,(NJ-0.5)*dy,NJ);
 
-XU=linspace(0-dx,NI*dx-dx,NI+1);
-YU=linspace(dy/2-dy,(NJ-0.5)*dy-dy,NJ);
+XU=linspace(0,NI*dx,NI+1);
+YU=linspace(dy/2,(NJ-0.5)*dy,NJ);
 
-XV=linspace(dx/2-dx,(NI-0.5)*dx-dx,NI);
-YV=linspace(0-dy,NJ*dy-dy,NJ+1);
+XV=linspace(dx/2,(NI-0.5)*dx,NI);
+YV=linspace(0,NJ*dy,NJ+1);
 
 ####################################################################
 ### BEGIN TIME INTEGRATION
@@ -504,19 +506,14 @@ while ((t < T1)&&(i < NT))
   p = pnew;
   t = t + dt;
   i = i + 1;
-
-  #output ?
-  if (mod(i,NPRIN) == 0)
+  if (mod(i,1) == 0)
     fprintf("t= %12.5E  |u|= %12.5E |v|= %12.5E |p|= %12.5E\n",
             t,norm(u),norm(v),norm(p));
     fflush(stdout);
   endif
 
   #save image ?
-  if (mod(i,NSAVE) == 0)
-    fprintf("saving solution at T= %g\n", t);
-    fflush(stdout);
-
+  if (mod(i,50) == 0)
     P=reshape(p,NJ,NI);
     U=reshape(u,NJ,NI+1);
     V=reshape(v,NJ+1,NI);
@@ -554,27 +551,3 @@ while ((t < T1)&&(i < NT))
     break;
   endif
 endwhile
-
-####################################################################
-### POST-PROCESSING
-
-figure();
-contourf(XP(2:NI),YP(2:NJ-1),P(2:NJ-1,2:NI));
-axis([XU(1) XU(NI+1) YV(1) YV(NJ+1)])
-colorbar();
-title(sprintf("Pressure at T=%g",t));
-print(sprintf("press%08d.png",i),"-dpng");
-
-figure();
-contourf(XU(2:NI),YU(2:NJ-1),U(2:NJ-1,2:NI));
-axis([XU(1) XU(NI+1) YV(1) YV(NJ+1)])
-colorbar();
-title(sprintf("U-Velocity at T=%g",t));
-print(sprintf("velou%08d.png",i),"-dpng");
-
-figure();
-contourf(XV(2:NI),YV(2:NJ),V(2:NJ,2:NI));
-axis([XU(1) XU(NI+1) YV(1) YV(NJ+1)])
-colorbar();
-title(sprintf("V-Velocity at T=%g",t));
-print(sprintf("velov%08d.png",i),"-dpng");
