@@ -29,6 +29,10 @@ T1 = 200;
 NT = (T1-T0)/dt;
 dtol = 1.0E-6;
 
+#Postprocessing
+NPRIN = 10;
+NSAVE = 500;
+
 #Arrays
 dimP = NI*NJ
 dimU = (NI+1)*NJ
@@ -155,7 +159,7 @@ for i=1:NI
          Ap(ij2n(i,j),ij2n(i,j-1)) =  1/h/h;
        endif
      else
-       #not inner: left unchanged
+       #not interior: left unchanged
        Ap(ij2n(i,j),ij2n(i,j)) = 1;
      endif
    endfor
@@ -335,7 +339,7 @@ for i=1:NI+1
          Dxu(ij2nu(i,j),ij2nu(i,j))  += -2/h/h;
        endif
      else
-       #not inner: left unchanged
+       #not interior: left unchanged
        Dxu(ij2nu(i,j),ij2nu(i,j)) = 1;
      endif
    endfor
@@ -383,7 +387,7 @@ for i=1:NI
          Dyv(ij2nv(i,j),ij2nv(i,j))  += -1/h/h;
        endif
      else
-       #not inner: left unchanged
+       #not interior: left unchanged
        Dyv(ij2nv(i,j),ij2nv(i,j)) = 1;
      endif
    endfor
@@ -446,14 +450,14 @@ endfor
 
 ####################################################################
 ### POST-PROCESSING INITIALIZATION
-XP=linspace(dx/2,(NI-0.5)*dx,NI);
-YP=linspace(dy/2,(NJ-0.5)*dy,NJ);
+XP=linspace(dx/2-dx,(NI-0.5)*dx-dx,NI);
+YP=linspace(dy/2-dy,(NJ-0.5)*dy-dy,NJ);
 
-XU=linspace(0,NI*dx,NI+1);
-YU=linspace(dy/2,(NJ-0.5)*dy,NJ);
+XU=linspace(0-dx,NI*dx-dx,NI+1);
+YU=linspace(dy/2-dy,(NJ-0.5)*dy-dy,NJ);
 
-XV=linspace(dx/2,(NI-0.5)*dx,NI);
-YV=linspace(0,NJ*dy,NJ+1);
+XV=linspace(dx/2-dx,(NI-0.5)*dx-dx,NI);
+YV=linspace(0-dy,NJ*dy-dy,NJ+1);
 
 ####################################################################
 ### BEGIN TIME INTEGRATION
@@ -491,7 +495,7 @@ while ((t < T1)&&(i < NT))
   rhs = (rho/dt)*(gradU*ustar + gradV*vstar);
   pnew = Ap\rhs;
 
-  #projection step
+  #correction step
   unew = ustar - (dt/rho)*gradPU*pnew;
   vnew = vstar - (dt/rho)*gradPV*pnew;
 
@@ -506,14 +510,19 @@ while ((t < T1)&&(i < NT))
   p = pnew;
   t = t + dt;
   i = i + 1;
-  if (mod(i,1) == 0)
+
+  #output ?
+  if (mod(i,NPRIN) == 0)
     fprintf("t= %12.5E  |u|= %12.5E |v|= %12.5E |p|= %12.5E\n",
             t,norm(u),norm(v),norm(p));
     fflush(stdout);
   endif
 
   #save image ?
-  if (mod(i,50) == 0)
+  if (mod(i,NSAVE) == 0)
+    fprintf("saving solution at T= %g\n", t);
+    fflush(stdout);
+
     P=reshape(p,NJ,NI);
     U=reshape(u,NJ,NI+1);
     V=reshape(v,NJ+1,NI);
