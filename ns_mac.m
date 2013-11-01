@@ -153,7 +153,7 @@ for i=1:NI
          Ap(ij2n(i,j),ij2n(i,j-1)) =  1/h/h;
        endif
      else
-       #not inner: left unchanged
+       #not interior: left unchanged
        Ap(ij2n(i,j),ij2n(i,j)) = 1;
      endif
    endfor
@@ -333,7 +333,7 @@ for i=1:NI+1
          Dxu(ij2nu(i,j),ij2nu(i,j))  += -2/h/h;
        endif
      else
-       #not inner: left unchanged
+       #not interior: left unchanged
        Dxu(ij2nu(i,j),ij2nu(i,j)) = 1;
      endif
    endfor
@@ -381,7 +381,7 @@ for i=1:NI
          Dyv(ij2nv(i,j),ij2nv(i,j))  += -1/h/h;
        endif
      else
-       #not inner: left unchanged
+       #not interior: left unchanged
        Dyv(ij2nv(i,j),ij2nv(i,j)) = 1;
      endif
    endfor
@@ -489,7 +489,7 @@ while ((t < T1)&&(i < NT))
   rhs = (rho/dt)*(gradU*ustar + gradV*vstar);
   pnew = Ap\rhs;
 
-  #projection step
+  #correction step
   unew = ustar - (dt/rho)*gradPU*pnew;
   vnew = vstar - (dt/rho)*gradPV*pnew;
 
@@ -533,9 +533,13 @@ while ((t < T1)&&(i < NT))
     figure(2,'visible','off');
     clf();
     contourf(XU(2:NI),YU(2:NJ-1),U(2:NJ-1,2:NI));
+    hold
+    czero=contour(XU(2:NI),YU(2:NJ-1),U(2:NJ-1,2:NI),[0,0]);
     axis([XU(1) XU(NI+1) YV(1) YV(NJ+1)])
     colorbar();
-    title(sprintf("U-Velocity at T=%g",t));
+    xzero=czero(end-1)-dx;
+    title(sprintf("U-Velocity at T=%g, Vortex Attachment Point at X=%g",
+                  t,xzero));
     print(sprintf("velou%08d.png",i),"-dpng");
     close();
 
@@ -563,18 +567,32 @@ contourf(XP(2:NI),YP(2:NJ-1),P(2:NJ-1,2:NI));
 axis([XU(1) XU(NI+1) YV(1) YV(NJ+1)])
 colorbar();
 title(sprintf("Pressure at T=%g",t));
-print(sprintf("press%08d.png",i),"-dpng");
 
 figure();
 contourf(XU(2:NI),YU(2:NJ-1),U(2:NJ-1,2:NI));
+hold
+czero=contour(XU(2:NI),YU(2:NJ-1),U(2:NJ-1,2:NI),[0,0]);
 axis([XU(1) XU(NI+1) YV(1) YV(NJ+1)])
 colorbar();
-title(sprintf("U-Velocity at T=%g",t));
-print(sprintf("velou%08d.png",i),"-dpng");
+xzero=czero(end-1)-dx;
+title(sprintf("U-Velocity at T=%g, Vortex Attachment Point at X=%g",
+              t,xzero));
 
 figure();
 contourf(XV(2:NI),YV(2:NJ),V(2:NJ,2:NI));
 axis([XU(1) XU(NI+1) YV(1) YV(NJ+1)])
 colorbar();
 title(sprintf("V-Velocity at T=%g",t));
-print(sprintf("velov%08d.png",i),"-dpng");
+
+figure();
+up = avgU*u;
+vp = avgV*v;
+UP=reshape(up,NJ,NI);
+VP=reshape(vp,NJ,NI);
+
+h=quiver(XP(2:NI),YP(2:NJ-1),UP(2:NJ-1,2:NI),VP(2:NJ-1,2:NI));
+axis([XU(1) XU(NI+1) YV(1) YV(NJ+1)])
+set (h, "maxheadsize", 0.33);
+
+### END POST-PROCESSING
+####################################################################

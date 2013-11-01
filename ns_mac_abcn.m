@@ -28,6 +28,10 @@ T1 = 1000;
 NT = (T1-T0)/dt;
 dtol = 1.0E-6;
 
+#Postprocessing
+NPRIN = 10;
+NSAVE = 500;
+
 #Arrays
 dimP = NI*NJ
 dimU = (NI+1)*NJ
@@ -82,7 +86,9 @@ for i=1:NI
        mask(ij2n(i,j)) = WALL;
      endif
      ###INTERIOR WALLS
-     if ((i <= (NI-1)/3+1)&&(j <= (NJ-2)/2+1))
+     xp = (i-1.5)*dx;
+     yp = (j-1.5)*dy;
+     if ((xp < 4)&&(yp < 1))
        mask(ij2n(i,j)) = WALL;
      endif
    endfor
@@ -447,6 +453,17 @@ endfor
 ####################################################################
 
 ####################################################################
+### POST-PROCESSING INITIALIZATION
+XP=linspace(dx/2-dx,(NI-0.5)*dx-dx,NI);
+YP=linspace(dy/2-dy,(NJ-0.5)*dy-dy,NJ);
+
+XU=linspace(0-dx,NI*dx-dx,NI+1);
+YU=linspace(dy/2-dy,(NJ-0.5)*dy-dy,NJ);
+
+XV=linspace(dx/2-dx,(NI-0.5)*dx-dx,NI);
+YV=linspace(0-dy,NJ*dy-dy,NJ+1);
+
+####################################################################
 ### BEGIN TIME INTEGRATION
 
 p = zeros(dimP,1);
@@ -526,10 +543,53 @@ while ((t < T1)&&(i < NT))
   v = vnew;
   t = t + dt;
   i = i + 1;
-  if (mod(i,100) == 0)
-  fprintf("t= %12.5E  |u|= %12.5E |v|= %12.5E |p|= %12.5E\n",
-          t,norm(u),norm(v),norm(p));
-  fflush(stdout);
+
+  #output ?
+  if (mod(i,NPRIN) == 0)
+    fprintf("t= %12.5E  |u|= %12.5E |v|= %12.5E |p|= %12.5E\n",
+            t,norm(u),norm(v),norm(p));
+    fflush(stdout);
+  endif
+
+  #save image ?
+  if (mod(i,NSAVE) == 0)
+    fprintf("saving solution at T= %g\n", t);
+    fflush(stdout);
+
+    P=reshape(p,NJ,NI);
+    U=reshape(u,NJ,NI+1);
+    V=reshape(v,NJ+1,NI);
+
+    figure(1,'visible','off');
+    clf();
+    contourf(XP(2:NI),YP(2:NJ-1),P(2:NJ-1,2:NI));
+    axis([XU(1) XU(NI+1) YV(1) YV(NJ+1)])
+    colorbar();
+    title(sprintf("Pressure at T=%g",t));
+    print(sprintf("press%08d.png",i),"-dpng");
+    close();
+
+    figure(2,'visible','off');
+    clf();
+    contourf(XU(2:NI),YU(2:NJ-1),U(2:NJ-1,2:NI));
+    hold
+    czero=contour(XU(2:NI),YU(2:NJ-1),U(2:NJ-1,2:NI),[0,0]);
+    axis([XU(1) XU(NI+1) YV(1) YV(NJ+1)])
+    colorbar();
+    xzero=czero(end-1)-dx;
+    title(sprintf("U-Velocity at T=%g, Vortex Attachment Point at X=%g",
+                  t,xzero));
+    print(sprintf("velou%08d.png",i),"-dpng");
+    close();
+
+    figure(3,'visible','off');
+    clf();
+    contourf(XV(2:NI),YV(2:NJ),V(2:NJ,2:NI));
+    axis([XU(1) XU(NI+1) YV(1) YV(NJ+1)])
+    colorbar();
+    title(sprintf("V-Velocity at T=%g",t));
+    print(sprintf("velov%08d.png",i),"-dpng");
+    close();
   endif
 
   #convergence ?
@@ -538,49 +598,32 @@ while ((t < T1)&&(i < NT))
   endif
 endwhile
 
-### END INITIALIZATION
 ####################################################################
+### POST-PROCESSING
 
-####################################################################
-### BEGIN POST-PROCESSING
-
-XP=linspace(dx/2,(NI-0.5)*dx,NI);
-YP=linspace(dy/2,(NJ-0.5)*dy,NJ);
-
-XU=linspace(0,NI*dx,NI+1);
-YU=linspace(dy/2,(NJ-0.5)*dy,NJ);
-
-XV=linspace(dx/2,(NI-0.5)*dx,NI);
-YV=linspace(0,NJ*dy,NJ+1);
-
-P=reshape(p,NJ,NI);
-U=reshape(u,NJ,NI+1);
-V=reshape(v,NJ+1,NI);
-
-#surf(XP,YP,P);
+figure();
 contourf(XP(2:NI),YP(2:NJ-1),P(2:NJ-1,2:NI));
 axis([XU(1) XU(NI+1) YV(1) YV(NJ+1)])
 colorbar();
 title(sprintf("Pressure at T=%g",t));
-figure();
 
-#surf(XU,YU,U);
+figure();
 contourf(XU(2:NI),YU(2:NJ-1),U(2:NJ-1,2:NI));
 hold
 czero=contour(XU(2:NI),YU(2:NJ-1),U(2:NJ-1,2:NI),[0,0]);
 axis([XU(1) XU(NI+1) YV(1) YV(NJ+1)])
 colorbar();
 xzero=czero(end-1)-dx;
-title(sprintf("U-Velocity at T=%g, Vortex Attachment Point at X=%g",t,xzero));
-figure();
+title(sprintf("U-Velocity at T=%g, Vortex Attachment Point at X=%g",
+              t,xzero));
 
-#surf(XV,YV,V);
+figure();
 contourf(XV(2:NI),YV(2:NJ),V(2:NJ,2:NI));
 axis([XU(1) XU(NI+1) YV(1) YV(NJ+1)])
 colorbar();
 title(sprintf("V-Velocity at T=%g",t));
-figure();
 
+figure();
 up = avgU*u;
 vp = avgV*v;
 UP=reshape(up,NJ,NI);
