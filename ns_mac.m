@@ -26,8 +26,8 @@ NT = (T1-T0)/dt;
 dtol = 1.0E-6;
 
 #Postprocessing
-NPRIN = 10;
-NSAVE = 500;
+NPRIN = 100;
+NSAVE = 0;
 
 #Arrays
 dimP = NI*NJ
