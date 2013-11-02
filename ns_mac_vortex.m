@@ -11,8 +11,6 @@
 global NI NJ
 Lx = 10.0
 Ly = 2.0
-lx = 0.5
-ly = 0.5
 h = 0.05
 NI = floor(Lx/h)
 NJ = floor(Ly/h)
@@ -31,7 +29,7 @@ rho= 1;
 dtd = h*h/(nu*4)
 dtc = 2*nu/umax
 dt = 0.5*min(dtd,dtc)
-tau = lx/umax/4
+tau = 0.5/umax/4
 dt = min(dt,tau)
 T0 = 0;
 T1 = 200;
