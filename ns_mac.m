@@ -1,3 +1,12 @@
+# Marker-and-Cell (MAC) Finite Volume Solver for the unsteady incompressible
+# Navier-Stokes equations in 2 dimensions. Time discretization is fully
+# explicit. A projection method (Chorin) is used to decouple pressure and
+# velocity fields. Domain boundaries (inflow,outflow,walls) are defined
+# using a mask vector.
+#
+# Author: Fernando Mut && Gustavo Buscaglia
+# Last Modification: 01/11/2013
+
 #Problem definition
 global NI NJ
 Lx = 12.0
@@ -27,7 +36,7 @@ dtol = 1.0E-6;
 
 #Postprocessing
 NPRIN = 10;
-NSAVE = 500;
+NSAVE = 0;
 
 #Arrays
 dimP = NI*NJ
